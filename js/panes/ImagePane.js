@@ -174,15 +174,22 @@ function ImagePane(props) {
             );
           break;
         case 'click':
-          if (isFocused)
+          if (isFocused) {
+            // Get current mouse position at click time
+            var rect = paneRef.current.children[1].getBoundingClientRect();
+            var xscreen = event.clientX - rect.x;
+            var yscreen = event.clientY - rect.y;
+            var ximage = Math.round((xscreen - view['tx']) / view['scale']);
+            var yimage = Math.round((yscreen - view['ty']) / view['scale']);
             sendPaneMessage(
               {
                 event_type: 'Click',
-                image_coord: mouseLocation,
+                image_coord: { x: ximage, y: yimage },
               },
               id,
               envID
             );
+          }
           break;
       }
     };
@@ -191,7 +198,7 @@ function ImagePane(props) {
     return function cleanup() {
       EventSystem.unsubscribe('global.event', onEvent);
     };
-  }, [mouseLocation, isFocused]);
+  }, [view, isFocused]);
 
   // image size/pos computation
   // --------------------------
