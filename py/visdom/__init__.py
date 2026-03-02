@@ -1782,6 +1782,9 @@ class Visdom(object):
         else:
             X = np.linspace(0, 1, Y.shape[0])
 
+        if Y.ndim == 2 and Y.shape[1] == 1:
+            Y = Y.reshape(Y.shape[0])
+        
         if Y.ndim == 2 and X.ndim == 1:
             X = np.tile(X, (Y.shape[1], 1)).transpose()
 
