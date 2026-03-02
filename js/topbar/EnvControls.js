@@ -8,7 +8,7 @@
  */
 
 import TreeSelect, { SHOW_CHILD } from 'rc-tree-select';
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useRef } from 'react';
 
 import ApiContext from '../api/ApiContext';
 
@@ -24,6 +24,8 @@ function EnvControls(props) {
     onEnvManageButton,
   } = props;
   const [confirmClear, setConfirmClear] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState([]);
+  const treeSelectRef = useRef(null);
 
   // tree select setup
   // -------
@@ -87,8 +89,11 @@ function EnvControls(props) {
             inputValue={null}
             value={envIDs}
             treeData={env_options2}
-            treeDefaultExpandAll
+            treeDefaultExpandAll={false}
+            treeExpandedKeys={expandedKeys}
+            onTreeExpand={setExpandedKeys}
             treeNodeFilterProp="title"
+            ref={treeSelectRef}
             treeDataSimpleMode={{ id: 'key', rootPId: 0 }}
             treeCheckable
             showCheckedStrategy={SHOW_CHILD}
@@ -112,6 +117,15 @@ function EnvControls(props) {
           onBlur={() => setConfirmClear(false)}
         >
           <span className="glyphicon glyphicon-erase" />
+        </button>
+        <button
+          data-toggle="tooltip"
+          title="Collapse All Groups"
+          data-placement="bottom"
+          className="btn btn-default"
+          onClick={() => setExpandedKeys([])}
+        >
+          <span className="glyphicon glyphicon-collapse-up" />
         </button>
         <button
           data-toggle="tooltip"
