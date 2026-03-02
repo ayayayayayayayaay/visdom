@@ -174,15 +174,14 @@ function ImagePane(props) {
             );
           break;
         case 'click':
-          if (isFocused)
-            sendPaneMessage(
-              {
-                event_type: 'Click',
-                image_coord: mouseLocation,
-              },
-              id,
-              envID
-            );
+          sendPaneMessage(
+            {
+              event_type: 'Click',
+              image_coord: mouseLocation,
+            },
+            id,
+            envID
+          );
           break;
       }
     };
