@@ -266,7 +266,8 @@ def compare_envs(state, eids, socket, env_path=DEFAULT_ENV_PATH):
         env = envs[eid]
         for wid in env.get("jsons", {}).keys():
             win = env["jsons"][wid]
-            if win.get("type", None) != "plot":
+            win_type = win.get("type", None)
+            if win_type not in ["plot", "text"]:
                 continue
             if "content" not in win:
                 continue
@@ -278,37 +279,57 @@ def compare_envs(state, eids, socket, env_path=DEFAULT_ENV_PATH):
 
             destWid = name2Wid[title]
             destWidJson = res["jsons"][destWid]
-            # Combine plots with the same window title. If plot data source was
-            # labeled "name" in the legend, rename to "envId_legend" where
-            # envId is enumeration of the selected environments (not the long
-            # environment id string). This makes plot lines more readable.
-            if ix == 0:
-                if "name" not in destWidJson["content"]["data"][0]:
-                    continue  # Skip windows with unnamed data
-                destWidJson["has_compare"] = False
-                destWidJson["content"]["layout"]["showlegend"] = True
-                destWidJson["contentID"] = get_rand_id()
-                for dataIdx, data in enumerate(destWidJson["content"]["data"]):
-                    if "name" not in data:
-                        break  # stop working with this plot, not right format
-                    destWidJson["content"]["data"][dataIdx]["name"] = "{}_{}".format(
-                        eidNums[eid], data["name"]
+            
+            if win_type == "plot":
+                # Combine plots with the same window title. If plot data source was
+                # labeled "name" in the legend, rename to "envId_legend" where
+                # envId is enumeration of the selected environments (not the long
+                # environment id string). This makes plot lines more readable.
+                if ix == 0:
+                    if "name" not in destWidJson["content"]["data"][0]:
+                        continue  # Skip windows with unnamed data
+                    destWidJson["has_compare"] = False
+                    destWidJson["content"]["layout"]["showlegend"] = True
+                    destWidJson["contentID"] = get_rand_id()
+                    for dataIdx, data in enumerate(destWidJson["content"]["data"]):
+                        if "name" not in data:
+                            break  # stop working with this plot, not right format
+                        destWidJson["content"]["data"][dataIdx]["name"] = "{}_{}".format(
+                            eidNums[eid], data["name"]
+                        )
+                else:
+                    if "name" not in destWidJson["content"]["data"][0]:
+                        continue  # Skip windows with unnamed data
+                    # has_compare will be set to True only if the window title is
+                    # shared by at least 2 envs.
+                    destWidJson["has_compare"] = True
+                    for _dataIdx, data in enumerate(win["content"]["data"]):
+                        data = copy.deepcopy(data)
+                        if "name" not in data:
+                            destWidJson["has_compare"] = False
+                            break  # stop working with this plot, not right format
+                        data["name"] = "{}_{}".format(eidNums[eid], data["name"])
+                        destWidJson["content"]["data"].append(data)
+            
+            elif win_type == "text":
+                # Combine text windows with the same title
+                if ix == 0:
+                    # First environment - initialize with index prefix
+                    destWidJson["has_compare"] = False
+                    destWidJson["contentID"] = get_rand_id()
+                    # Add index prefix to the title and content
+                    destWidJson["title"] = "{} (0, 1, 2, ...)".format(title)
+                    destWidJson["content"] = "<b>[{}]</b><br>{}".format(
+                        eidNums[eid], win["content"]
                     )
-            else:
-                if "name" not in destWidJson["content"]["data"][0]:
-                    continue  # Skip windows with unnamed data
-                # has_compare will be set to True only if the window title is
-                # shared by at least 2 envs.
-                destWidJson["has_compare"] = True
-                for _dataIdx, data in enumerate(win["content"]["data"]):
-                    data = copy.deepcopy(data)
-                    if "name" not in data:
-                        destWidJson["has_compare"] = False
-                        break  # stop working with this plot, not right format
-                    data["name"] = "{}_{}".format(eidNums[eid], data["name"])
-                    destWidJson["content"]["data"].append(data)
+                else:
+                    # Subsequent environments - append content with index
+                    destWidJson["has_compare"] = True
+                    destWidJson["content"] += "<br><br><b>[{}]</b><br>{}".format(
+                        eidNums[eid], win["content"]
+                    )
 
-    # Make sure that only plots that are shared by at least two envs are shown.
+    # Make sure that only windows (plots and text) that are shared by at least two envs are shown.
     # Check has_compare flag
     for destWid in list(res["jsons"].keys()):
         if ("has_compare" not in res["jsons"][destWid]) or (
