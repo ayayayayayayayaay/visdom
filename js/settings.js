@@ -2,6 +2,7 @@ import EmbeddingsPane from './panes/EmbeddingsPane';
 import ImagePane from './panes/ImagePane';
 import NetworkPane from './panes/NetworkPane';
 import PlotPane from './panes/PlotPane';
+import PointCloudPane from './panes/PointCloudPane';
 import PropertiesPane from './panes/PropertiesPane';
 import TextPane from './panes/TextPane';
 
@@ -16,6 +17,7 @@ const PANES = {
   properties: PropertiesPane,
   embeddings: EmbeddingsPane,
   network: NetworkPane,
+  pointcloud: PointCloudPane,
 };
 const PANE_SIZE = {
   image: [20, 20],
@@ -25,6 +27,7 @@ const PANE_SIZE = {
   embeddings: [20, 20],
   properties: [20, 20],
   network: [20, 20],
+  pointcloud: [30, 30],
 };
 const MODAL_STYLE = {
   content: {

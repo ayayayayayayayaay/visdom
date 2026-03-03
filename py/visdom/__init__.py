@@ -2529,6 +2529,126 @@ class Visdom(object):
         return self._send(datasend, "events")
 
     @pytorch_wrap
+    def pointcloud(self, points, colors=None, win=None, env=None, opts=None):
+        """
+        This function visualizes 3D point clouds using WebGL for interactive rendering.
+        Designed for deep learning applications like PointNet and autonomous driving.
+        
+        Args:
+            points : numpy array, required
+                An Nx3 tensor containing 3D coordinates (x, y, z) of N points
+            colors : numpy array, optional  
+                An Nx3 tensor containing RGB colors [0-255] for each point,
+                or an N tensor containing class labels for automatic coloring
+            win : string, optional
+                Window identifier
+            env : string, optional
+                Environment identifier
+            opts : dict, optional
+                * `point_size` : size of points (default: 2.0)
+                * `camera_position` : dict with x, y, z camera position
+                * `background_color` : background color (default: '#000000')
+                * `colormap` : colormap for class labels ('viridis', 'plasma', etc.)
+                * `show_axes` : show coordinate axes (default: True)
+                * `title` : plot title
+        """
+        points = np.asarray(points)
+        assert points.ndim == 2 and points.shape[1] == 3, "Points must be Nx3 array"
+        
+        opts = {} if opts is None else opts
+        opts["point_size"] = opts.get("point_size", 2.0)
+        opts["background_color"] = opts.get("background_color", "#000000")
+        opts["show_axes"] = opts.get("show_axes", True)
+        opts["colormap"] = opts.get("colormap", "viridis")
+        
+        _title2str(opts)
+        _assert_opts(opts)
+        
+        # Process colors
+        if colors is not None:
+            colors = np.asarray(colors)
+            assert colors.shape[0] == points.shape[0], "Colors must match number of points"
+            
+            if colors.ndim == 1:
+                # Class labels - convert to colors using colormap
+                unique_labels = np.unique(colors)
+                colormap_colors = self._generate_colormap_colors(len(unique_labels), opts["colormap"])
+                color_array = np.zeros((len(colors), 3))
+                for i, label in enumerate(unique_labels):
+                    mask = colors == label
+                    color_array[mask] = colormap_colors[i]
+                colors = color_array
+            elif colors.ndim == 2 and colors.shape[1] == 3:
+                # RGB colors - ensure in [0,1] range
+                if colors.max() > 1.0:
+                    colors = colors / 255.0
+            else:
+                raise ValueError("Colors must be Nx3 RGB array or N class labels")
+        else:
+            # Default white points
+            colors = np.ones((points.shape[0], 3))
+        
+        # Prepare data for frontend
+        data = [{
+            "content": {
+                "points": points.tolist(),
+                "colors": colors.tolist(),
+                "point_size": opts["point_size"],
+                "background_color": opts["background_color"],
+                "show_axes": opts["show_axes"],
+                "camera_position": opts.get("camera_position")
+            },
+            "type": "pointcloud"
+        }]
+        
+        return self._send({
+            "data": data,
+            "win": win,
+            "eid": env,
+            "opts": opts
+        })
+    
+    def _generate_colormap_colors(self, n_colors, colormap_name):
+        """Generate colors from matplotlib colormap"""
+        try:
+            import matplotlib.pyplot as plt
+            cmap = plt.get_cmap(colormap_name)
+            colors = []
+            for i in range(n_colors):
+                rgba = cmap(i / max(1, n_colors - 1))
+                colors.append([rgba[0], rgba[1], rgba[2]])  # RGB only
+            return colors
+        except ImportError:
+            # Fallback to simple color generation
+            colors = []
+            for i in range(n_colors):
+                hue = i / max(1, n_colors - 1)
+                colors.append(self._hsv_to_rgb(hue, 1.0, 1.0))
+            return colors
+    
+    def _hsv_to_rgb(self, h, s, v):
+        """Convert HSV to RGB"""
+        import math
+        c = v * s
+        x = c * (1 - abs((h * 6) % 2 - 1))
+        m = v - c
+        
+        if h < 1/6:
+            r, g, b = c, x, 0
+        elif h < 2/6:
+            r, g, b = x, c, 0
+        elif h < 3/6:
+            r, g, b = 0, c, x
+        elif h < 4/6:
+            r, g, b = 0, x, c
+        elif h < 5/6:
+            r, g, b = x, 0, c
+        else:
+            r, g, b = c, 0, x
+            
+        return [r + m, g + m, b + m]
+
+    @pytorch_wrap
     def graph(
         self, edges, edgeLabels=None, nodeLabels=None, opts=dict(), env=None, win=None
     ):
