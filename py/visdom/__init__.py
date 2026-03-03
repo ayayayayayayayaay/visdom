@@ -984,6 +984,17 @@ class Visdom(object):
         _assert_opts(opts)
         data = [{"content": data, "type": "properties"}]
 
+        # Check if window exists and use update endpoint if it does
+        endpoint = "events"
+        if win is not None and not self.offline:
+            try:
+                exists = self.win_exists(win, env)
+                if exists:
+                    endpoint = "update"
+            except Exception:
+                # If there's any error checking, use events endpoint
+                endpoint = "events"
+
         return self._send(
             {
                 "data": data,
@@ -991,7 +1002,7 @@ class Visdom(object):
                 "eid": env,
                 "opts": opts,
             },
-            endpoint="events",
+            endpoint=endpoint,
         )
 
     @pytorch_wrap

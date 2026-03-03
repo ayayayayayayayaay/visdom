@@ -135,6 +135,10 @@ class UpdateHandler(BaseHandler):
         if p["type"] == "text":
             p["content"] += "<br>" + args["data"][0]["content"]
             return p
+        if p["type"] == "properties":
+            # Update properties content
+            p["content"] = args["data"][0]["content"]
+            return p
         if p["type"] == "embeddings":
             # TODO embeddings updates should be handled outside of the regular
             # update flow, as update packets are easy to create manually and
@@ -335,6 +339,7 @@ class UpdateHandler(BaseHandler):
 
         if not (
             p["type"] == "text"
+            or p["type"] == "properties"
             or p["type"] == "image_history"
             or p["type"] == "embeddings"
             or (
@@ -344,7 +349,7 @@ class UpdateHandler(BaseHandler):
             )
         ):
             handler.write(
-                "win is not scatter, heatmap, custom, image_history, embeddings, or text; "
+                "win is not scatter, heatmap, custom, image_history, embeddings, properties, or text; "
                 "was {}".format(
                     p["content"]["data"][0]["type"]
                     if len(p["content"]["data"]) > 0
